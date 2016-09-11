@@ -1,39 +1,39 @@
 package datatables
 
 import (
-	"net/url"
-	"strconv"
 	"errors"
 	"fmt"
+	"net/url"
+	"strconv"
 )
 
-const  (
-	urlStart = "start"
-	urlLength = "length"
+const (
+	urlStart       = "start"
+	urlLength      = "length"
 	urlSearchValue = "search[value]"
 	urlOrderColumn = "order[0][column]"
-	urlOrderDir = "order[0][dir]"
-	urlDraw = "draw"
+	urlOrderDir    = "order[0][dir]"
+	urlDraw        = "draw"
 
-	urlColBase = "columns[%d]"
-	urlColData = "[data]"
-	urlColName = "[name]"
-	urlColSearchable = "[searchable]"
-	urlColOrderable = "[orderable]"
+	urlColBase        = "columns[%d]"
+	urlColData        = "[data]"
+	urlColName        = "[name]"
+	urlColSearchable  = "[searchable]"
+	urlColOrderable   = "[orderable]"
 	urlColSearchValue = "[search][value]"
 	urlColSearchRegex = "[search][regex]"
 )
 
 type columnURLFields struct {
-	data       string
-	name       string
-	searchable string
-	orderable  string
+	data        string
+	name        string
+	searchable  string
+	orderable   string
 	searchValue string
 	searchRegex string
 }
 
-func newColumnUrlFields(colI int) (*columnURLFields) {
+func newColumnUrlFields(colI int) *columnURLFields {
 	columnBase := fmt.Sprintf(urlColBase, colI)
 	col := new(columnURLFields)
 	col.data = columnBase + urlColData
@@ -45,14 +45,14 @@ func newColumnUrlFields(colI int) (*columnURLFields) {
 	return col
 }
 
-type UrlParams struct {
-	start          int
-	length         int
-	search         string
-	orderColumn    int
-	orderDirection string
-	draws          int
-	columns        []column
+type urlParams struct {
+	start       int
+	length      int
+	search      string
+	orderColumn int
+	orderDir    string
+	draws       int
+	columns     []column
 }
 
 type column struct {
@@ -61,13 +61,13 @@ type column struct {
 	searchable bool
 	orderable  bool
 	search     struct {
-			   value string
-			   regex bool
-		   }
+		value string
+		regex bool
+	}
 }
 
 // ParseUrlQuery parse urlValues according to DataTables url parameter specification
-func ParseUrlQuery(urlValues url.Values, columnsCount int) (*UrlParams, error) {
+func parseUrlQuery(urlValues url.Values, columnsCount int) (*urlParams, error) {
 	if urlValues == nil {
 		return nil, errors.New("urlValues argument equals to nil")
 	}
@@ -75,7 +75,7 @@ func ParseUrlQuery(urlValues url.Values, columnsCount int) (*UrlParams, error) {
 		return nil, errors.New("columns count cannot be less than or equal to zero")
 	}
 
-	urlP := new(UrlParams)
+	urlP := new(urlParams)
 	var err error
 
 	urlP.start, err = strconv.Atoi(urlValues.Get(urlStart))
@@ -95,9 +95,9 @@ func ParseUrlQuery(urlValues url.Values, columnsCount int) (*UrlParams, error) {
 		return nil, errors.New("invalid url parameter: " + urlOrderColumn + " must be a valid integer")
 	}
 
-	urlP.orderDirection = urlValues.Get(urlOrderDir)
-	if urlP.orderDirection != "asc" && urlP.orderDirection != "desc" {
-		return nil, errors.New("invalid url parameter: " + urlOrderDir + " may be either 'asc' or 'desc'")
+	urlP.orderDir = urlValues.Get(urlOrderDir)
+	if urlP.orderDir != "asc" && urlP.orderDir != "desc" {
+		return nil, errors.New("invalid url parameter: " + urlOrderDir + " may be either 'asc' or 'desc'. Got: " + urlP.orderDir)
 	}
 
 	urlP.draws, err = strconv.Atoi(urlValues.Get(urlDraw))
