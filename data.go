@@ -4,8 +4,10 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/astaxie/beego/orm"
 	"fmt"
+	"strconv"
+
+	"github.com/astaxie/beego/orm"
 )
 
 type response struct {
@@ -25,10 +27,10 @@ func (r *response) makeMap() map[string]interface{} {
 }
 
 type Data struct {
-	UrlValues    url.Values //get args
-	db           orm.Ormer
-	TableName    string     //table name
-	Columns      []string   //select column
+	UrlValues url.Values //get args
+	db        orm.Ormer  //for t
+	TableName string     //table name
+	Columns   []string   //select column
 }
 
 func (d *Data) dbQuery(urlParams *urlParams, records []interface{}) (*response, error) {
@@ -45,15 +47,9 @@ func (d *Data) dbQuery(urlParams *urlParams, records []interface{}) (*response, 
 		selectStr += v
 	}
 
+	query := "SELECT " + selectStr + " FROM " + d.TableName
+
 	isSearch := urlParams.search != ""
-
-	colOffset := urlParams.start
-	qb, err := orm.NewQueryBuilder(d.db.Driver().Name())
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct a new query builder. Error: %v", err)
-	}
-
-	qb.Select(selectStr).From(d.TableName)
 
 	var whereStr string
 	if isSearch {
@@ -63,23 +59,15 @@ func (d *Data) dbQuery(urlParams *urlParams, records []interface{}) (*response, 
 			}
 			whereStr += v + " LIKE " + "\"%" + urlParams.search + "%\"" //like
 		}
-		qb.Where(whereStr)
-
+		query += " WHERE " + whereStr
 	}
 
-	qb.OrderBy(d.Columns[urlParams.orderColumn])
+	query += " ORDER BY " + d.Columns[urlParams.orderColumn] + " " + urlParams.orderDir + " LIMIT " +
+		strconv.Itoa(urlParams.length) + " OFFSET " + strconv.Itoa(urlParams.start) + ";"
 
-	if urlParams.orderDir == "asc" {
-		qb.Asc()
-	} else {
-		qb.Desc()
-	}
+	fmt.Println(query)
 
-	qb.Limit(urlParams.length).Offset(colOffset)
-
-	fmt.Println(qb.String())
-
-	_, err = d.db.Raw(qb.String()).QueryRows(records)
+	_, err := d.db.Raw(query).QueryRows(records)
 	if err != nil {
 		return nil, fmt.Errorf("query failed. Error: %v", err)
 	}
@@ -89,15 +77,11 @@ func (d *Data) dbQuery(urlParams *urlParams, records []interface{}) (*response, 
 	var recordsFiltered int64 //search data sum
 
 	if isSearch {
-		qbFilterCount, _ := orm.NewQueryBuilder(d.db.Driver().Name())
-		qbFilterCount.Select("Count(*) AS cnt ").From(d.TableName).Where(whereStr)
-		sqlFilter := qbFilterCount.String()
-
+		query := "SELECT COUNT(*) AS cnt FROM " + d.TableName + " WHERE " + whereStr + ";"
 		var rcount struct {
 			Cnt int64
 		}
-
-		err = d.db.Raw(sqlFilter).QueryRow(&rcount)
+		err = d.db.Raw(query).QueryRow(&rcount)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch the number of filtered records. Error: %v", err)
@@ -116,7 +100,7 @@ func (d *Data) dbQuery(urlParams *urlParams, records []interface{}) (*response, 
 	}, nil
 }
 
-func (d *Data) Table(records []interface{}) (map[string]interface{}, error) {
+func (d *Data) Request(records []interface{}) (map[string]interface{}, error) {
 	if d.db == nil {
 		return nil, errors.New("invalid orm: nil value")
 	}
