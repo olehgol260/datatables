@@ -12,6 +12,6 @@ func (dt *Datatables) NewData() *Data {
 	return &Data{db: dt.O}
 }
 
-func NewDatatables(o orm.Ormer) *Datatables {
+func New(o orm.Ormer) *Datatables {
 	return &Datatables{O: o}
 }

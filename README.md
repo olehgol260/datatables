@@ -7,56 +7,47 @@
 
 ###### Usage
 
-routers
-```go
-package routers
 
-import (
-	"controllers"
-	"github.com/astaxie/beego"
-)
-
-func init() {
-
-	beego.Router("/datatables/data/json", &controllers.OperationRecord{},"*:AjaxData")
-	
-}
-```
-
-beego controllers:
+beego controller:
 ```go
 package controllers
 
 import (
-	"github.com/astaxie/beego"
 	"time"
+	
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/orm"
+
 	"github.com/beego-datatables/datatables"
+	
 	".../models"
 )
 
-type Example struct {
+// this value is commonly initialized in models, but is put here for consistency of the whole example
+var DB orm.Ormer
 
+type Example struct {
 	beego.Controller
-	
 }
 
 func (c *Example) AjaxData(){
-
-	var Qtab datatables.Data
-	Qtab.Ctx = c.Input() //datatables get
-
-	Qtab.TableName = "example_record" //modles tables name
-	Qtab.Columns = []string{"id","user_name","operation","action","result","create_time"} //datatables columns arrange
-	Qtab.SearchFilter = []string{"user_name","operation","action","result"} //datatables filter
-	datatables.RegisterColumns[Qtab.TableName] = new([]models.ExampleRecord) //register result 
-
-	rs , _ := Qtab.Table()
-
+    datatables := datatables.New(DB) // this variable can be also initialized once just after DB and then reused across any controller
+    
+    data := datatables.NewData()
+    data.Columns = []string{"id","user_name","operation","action","result","create_time"} // the order of the column names here must match the order of clumns in the url parameters
+    data.TableName = "example_record"
+    
+    // data.Request will store the requested data into this slice
+    var result []models.ExampleRecord
+    
+    // rs is of type map[string]interface{}
+    rs, err := data.Request(c.Input(), &result)
+    if err != nil {
+        // something went wrong
+    }
 
 	c.Data["json"] = rs
-
 	c.ServeJSON()
-	
 }
 
 ```
@@ -66,34 +57,11 @@ models
 
 ```go
 type ExampleRecord struct {
-
 	Id					int
-	User				*User 		`orm:"rel(fk);null;on_delete(set_null)"`
+	User				*User 	
 	Operation 			string
 	Action 				string
-	Result 				string		`orm:"type(text)"`
-	CreateTime 			time.Time 	`orm:"auto_now_add;type(datetime)"`
-	
+	Result 				string	
+	CreateTime 			time.Time 
 }
-```
-
-datatables ajax
-
-```javascript
-    var example_table = $('#table').DataTable({
-        ...
-        "processing": true,
-        "serverSide": true,
-        "ajax": '/datatables/data/json',
-        "aLengthMenu": [[5,15, 25, 50, 100, 200, 500], ['5','15', '25', '50', '100', '200', '500']],
-        "iDisplayLength": 15,
-        "columns": [
-            { "data": "id" },
-            { "data": "username" },
-            { "data": "operation" },
-            { "data": "action" },
-            { "data": "result" }
-        ],
-        ...
-       })
 ```

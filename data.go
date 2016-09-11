@@ -27,7 +27,6 @@ func (r *response) makeMap() map[string]interface{} {
 }
 
 type Data struct {
-	UrlValues url.Values //get args
 	db        orm.Ormer  //for t
 	TableName string     //table name
 	Columns   []string   //select column
@@ -100,7 +99,7 @@ func (d *Data) dbQuery(urlParams *urlParams, records []interface{}) (*response, 
 	}, nil
 }
 
-func (d *Data) Request(records []interface{}) (map[string]interface{}, error) {
+func (d *Data) Request(urlValues url.Values, records []interface{}) (map[string]interface{}, error) {
 	if d.db == nil {
 		return nil, errors.New("invalid orm: nil value")
 	}
@@ -109,7 +108,7 @@ func (d *Data) Request(records []interface{}) (map[string]interface{}, error) {
 		return nil, errors.New("invalid resultColumns: nil or zero length slice")
 	}
 
-	urlParams, err := parseUrlQuery(d.UrlValues, len(d.Columns))
+	urlParams, err := parseUrlQuery(urlValues, len(d.Columns))
 	if err != nil {
 		return nil, err
 	}
